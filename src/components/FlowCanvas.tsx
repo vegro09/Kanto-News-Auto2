@@ -60,7 +60,7 @@ function FlowNode({
   icon: LucideIcon;
   label: string;
   value: string;
-  sub?: string;
+  sub?: string | undefined;
   ghost?: boolean;
 }) {
   return (
