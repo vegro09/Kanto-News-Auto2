@@ -1,84 +1,130 @@
-# Kanto Flow Visualizer
+# ⚡ Kanto News Auto
 
-Act as an expert Frontend Architect and UI/UX Designer. Build a React-based single-page application for an AI Automation Flow Visualizer. 
+> **Autonomous News Aggregator, Gemini AI Arabic Summarizer & Gmail API Delivery System**  
+> Designed under the strict **Kanto Empire Constitution** (Dynamic Flat UI, 8px radius, Kanto Black `#000000`, Kanto Cream `#F5F5DC`, `#333333` hairlines, zero glows/shadows).
 
-### 1. DESIGN SYSTEM (STRICT KANTO EMPIRE CONSTITUTION)
+---
 
-You MUST strictly adhere to the following design rules:
+## 🚀 Overview
 
-- **Colors:** Primary background MUST be solid Kanto Black (#000000). Primary accents, text, and nodes MUST use Kanto Cream (#F5F5DC). Structural dividers are 1px solid (#333333).
+**Kanto News Auto** is a production-grade full-stack automation system that fetches RSS feeds, summarizes them into structured Arabic technical digests using Google Gemini AI, and automatically dispatches the brief to the user's Gmail account at a scheduled time (e.g. `07:00 AM`) via the Google Gmail API using offline OAuth2 refresh tokens.
 
-- **Typography:** The main logo must be 'Kanto Terminal' (or 'Kanto Automator') using a Serif Italic font (e.g., Playfair Display Italic). General UI body text must use 'Inter' for English and 'Tajawal' for Arabic.
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Timer Node  │────▶│ Search Nodes │────▶│  AI Engine   │────▶│  Gmail Node  │
+│ (node-cron)  │     │(axios/parser)│     │ (@google/ai) │     │ (OAuth2/API) │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+```
 
-- **UI Archetype:** "Dynamic Flat UI". Use exactly 8px border radius for all cards, nodes, and inputs.
+---
 
-- **ABSOLUTE PROHIBITION:** NO drop shadows, NO glassmorphism, NO 3D effects, NO gradients, NO glowing filters. Everything must be purely flat. 
+## 🛠️ Architecture & Features
 
-### 2. STATE MANAGEMENT & ARCHITECTURE
+### 1. Google OAuth2 & Gmail API (SaaS Architecture)
+- **Offline Consent Flow**: Enforces `access_type: 'offline'` and `prompt: 'consent'` to securely capture and store long-lived `refresh_tokens`.
+- **Dynamic Self-Delivery**: Automatically resolves sender and recipient to the exact Google account authenticated (`From: User -> To: User`).
+- **RFC 2822 & Base64URL Encoding**: Standard MIME structure with UTF-8 encoding and responsive Arabic RTL HTML typography (`Tajawal` font).
 
-- Use React Context or Zustand to manage a global state. 
+### 2. Task Scheduling & Dynamic Recalibration
+- Powered by `node-cron`.
+- Configured in 24-hr `HH:mm` format (e.g. `07:00` $\rightarrow$ `0 7 * * *`).
+- Dynamically reschedules the cron job whenever settings are altered in the UI.
 
-- The state must hold: an array of `searchUrls`, an `apiKey` string, a `promptInstructions` string, and a `scheduledTime` string.
+### 3. Multi-Source Data Fetching Engine
+- Built with `axios` and `rss-parser`.
+- Queries RSS, Atom, and web sources in parallel.
+- Strips raw HTML and extracts clean titles, links, and content snippets.
 
-- The UI has two main views: 'Dashboard View' (Main) and 'Settings View'. Toggle between them using a minimal gear icon in the top right corner.
+### 4. Gemini AI Arabic Summarization
+- Integrates `@google/generative-ai` (`gemini-1.5-flash` / `gemini-2.0-flash`).
+- Formats structured Arabic briefs (Key Highlights, Deep Analysis, Actionable Insights).
 
-### 3. DASHBOARD VIEW (MAIN PAGE)
+### 5. Dynamic Flat Flow Canvas (Frontend)
+- Custom interactive SVG graph visualization.
+- Pure Flat UI: 8px border radius, Kanto Cream borders, solid Kanto Black fill, no drop shadows, no glassmorphism, no glows.
+- Displays live pipeline execution states (`TRIGGER`, `FETCHING`, `SUMMARIZING`, `DISPATCHING`, `SENT`).
 
-- This is a READ-ONLY visualizer.
+---
 
-- **Header:** Top-left shows the Kanto logo in Serif Italic Kanto Cream. Top-right shows the settings gear icon.
+## 📦 Quick Start & Installation
 
-- **Canvas:** The center of the screen uses a node-based visualizer (you can use 'reactflow' or build a custom SVG-based node tree).
+### 1. Clone the Repository
+```bash
+git clone https://github.com/vegro09/Kanto-News-Auto1.git
+cd Kanto-News-Auto1
+```
 
-- **Node Flow Logic:** 
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-  1. Root Node: "Timer Node" (displays the `scheduledTime` from state).
+### 3. Configure Environment Variables (`.env`)
+Create a `.env` file in the root folder:
 
-  2. Child Nodes: "Search Nodes". Map over the `searchUrls` state and render one node per URL. If a URL is added in settings, a new node MUST dynamically appear here.
+```env
+# Server Port
+PORT=5000
 
-  3. Processing Node: "AI Engine Node" (connected to all Search Nodes).
+# Google Gemini API Key
+GEMINI_API_KEY=your_gemini_api_key
 
-  4. Output Node: "Email Delivery Node".
+# Daily Schedule (24-hour HH:mm format)
+SCHEDULED_TIME=07:00
 
-- **Node Styling:** Solid Kanto Black fill, 1px Kanto Cream border, 8px radius, Kanto Cream text. Connections between nodes must be smooth Bezier curves in Kanto Cream.
+# Comma-separated Feed Sources
+SEARCH_URLS=https://news.ycombinator.com/rss,https://www.theverge.com/rss/index.xml
 
-### 4. SETTINGS VIEW
+# Custom Arabic Prompt Instructions
+PROMPT_INSTRUCTIONS="قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات."
 
-- A clean, minimal form page with expansive negative space.
+# Google Cloud OAuth2 Credentials
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
 
-- Use 1px hairline separators between sections.
+# Automatically populated after Google Login:
+GOOGLE_REFRESH_TOKEN=
+GOOGLE_USER_EMAIL=
+```
 
-- **Components:**
-
-  1. A "Sign in with Google" button for OAuth email connection.
-
-  2. Time Picker input for scheduling.
-
-  3. Password input field for the API Key.
-
-  4. Textarea for "AI Instructions / Prompt".
-
-  5. A dynamic list input for URL Sources. Include an "Add Source" button. When a user adds or deletes a URL here, it updates the global state (which instantly updates the Dashboard nodes).
-
-- NO complex styling, keep it technical, quiet, and hyper-minimalist.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b8347173-3207-499a-aad3-6c17cb0a1458).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+### 4. Run Full-Stack Development
+```bash
 npm run dev
 ```
+- **Backend Core Engine**: `http://localhost:5000`
+- **Vite React Frontend**: `http://localhost:3000`
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/auth/google` | Initiates Google OAuth2 offline consent flow |
+| `GET` | `/api/auth/google/callback` | OAuth redirect callback exchanging code for `refresh_token` |
+| `POST` | `/api/auth/google/disconnect` | Revokes stored Google OAuth tokens |
+| `GET` | `/api/auth/status` | Returns OAuth identity and token state |
+| `GET` | `/api/settings` | Returns active settings (search URLs, schedule, prompt) |
+| `POST` | `/api/settings` | Updates in-memory settings and dynamically recalibrates scheduler |
+| `POST` | `/api/trigger-test` | Manually triggers full pipeline (Fetch $\rightarrow$ AI $\rightarrow$ Gmail API) |
+| `GET` | `/api/status` | Returns scheduler status and latest execution brief |
+| `GET` | `/api/history` | Returns execution history logs |
+| `GET` | `/api/health` | Service health check |
+
+---
+
+## 🏛️ Kanto Empire Design System
+
+- **Master Canvas**: Solid Kanto Black (`#000000`)
+- **Primary Tone**: Kanto Cream (`#F5F5DC`)
+- **Hairlines**: 1px Solid (`#333333`)
+- **Corner Radius**: `8px`
+- **Typography**: Playfair Display Italic (Brand), Inter & Tajawal (Body / Arabic)
+- **Prohibition**: Zero drop shadows, zero glassmorphism, zero 3D effects, zero glowing filters.
+
+---
+
+## 📜 License
+
+MIT © Kanto Empire
