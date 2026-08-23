@@ -1,7 +1,7 @@
 import { stateService, PipelineExecutionLog } from "./state.service";
 import { fetcherService } from "./fetcher.service";
 import { aiService } from "./ai.service";
-import { mailerService } from "./mailer.service";
+import { gmailService } from "./gmail.service";
 
 export class PipelineService {
   private isRunning = false;
@@ -40,16 +40,13 @@ export class PipelineService {
         settings.apiKey
       );
 
-      // Step 3: Email Delivery
+      // Step 3: Gmail API Email Delivery (Self-Delivery: To = From = UserEmail)
       stateService.appendLog(
         "system",
         "info",
-        `[Phase 3/3] Delivering summary digest to ${settings.recipientEmail}...`
+        `[Phase 3/3] Delivering summary digest via Gmail API (OAuth2)...`
       );
-      const emailResult = await mailerService.sendSummaryEmail(
-        aiResult.summaryArabic,
-        settings.recipientEmail
-      );
+      const emailResult = await gmailService.sendSummaryEmail(aiResult.summaryArabic);
 
       const durationMs = Date.now() - startTime;
       stateService.appendLog(
@@ -65,7 +62,8 @@ export class PipelineService {
         totalArticlesFetched: totalArticles,
         aiSummary: aiResult.summaryArabic,
         emailSentTo: emailResult.recipient,
-        emailPreviewUrl: emailResult.previewUrl,
+        emailDeliveryMethod: emailResult.deliveryMethod,
+        gmailMessageId: emailResult.messageId,
       });
 
       return completed;

@@ -1,5 +1,5 @@
 import { Cpu, Globe, Mail, Timer, type LucideIcon } from "lucide-react";
-import { useFlow, ExecutionStep } from "@/lib/flow-store";
+import { useFlow } from "@/lib/flow-store";
 
 const NODE_W = 240;
 const NODE_H = 76;
@@ -43,7 +43,7 @@ function Edge({
       strokeOpacity={ghost ? 0.25 : active ? 1 : 0.8}
       strokeWidth={active ? 1.5 : 1}
       strokeDasharray={active ? "3 3" : "5 7"}
-      className={active ? "edge-flow" : "edge-flow"}
+      className="edge-flow"
     />
   );
 }
@@ -144,7 +144,7 @@ export default function FlowCanvas() {
     scheduledTime,
     promptInstructions,
     googleConnected,
-    recipientEmail,
+    googleUserEmail,
     activeStep,
     isExecuting,
   } = useFlow();
@@ -177,7 +177,7 @@ export default function FlowCanvas() {
       viewBox={`0 0 ${width} ${height}`}
       className="h-auto w-full min-w-[880px]"
       role="img"
-      aria-label="Automation flow: timer triggers search sources, feeding an AI engine and email delivery"
+      aria-label="Automation flow: timer triggers search sources, feeding an AI engine and Gmail API delivery"
     >
       <ColumnCaption x={timer.x}>Trigger</ColumnCaption>
       <ColumnCaption x={xCol(1)}>Sources</ColumnCaption>
@@ -220,7 +220,7 @@ export default function FlowCanvas() {
         icon={Timer}
         label="Timer"
         value={scheduledTime || "—"}
-        sub="Daily cron trigger"
+        sub="Daily 07:00 AM Cron"
         isActive={isTimerActive}
         statusBadge={isTimerActive ? "TRIGGER" : "ACTIVE"}
       />
@@ -258,7 +258,7 @@ export default function FlowCanvas() {
         icon={Cpu}
         label="AI Engine"
         value="Gemini Summarizer"
-        sub={promptInstructions ? promptInstructions.slice(0, 32) + "..." : "Arabic digest prompt"}
+        sub={promptInstructions ? promptInstructions.slice(0, 30) + "..." : "Arabic digest prompt"}
         isActive={isAiActive}
         statusBadge={isAiActive ? "SUMMARIZING" : undefined}
       />
@@ -267,15 +267,17 @@ export default function FlowCanvas() {
         x={email.x}
         y={email.y}
         icon={Mail}
-        label="Email Delivery"
-        value={recipientEmail || (googleConnected ? "Google Connected" : "Local Dispatch")}
-        sub={googleConnected ? "OAuth · Google" : "SMTP Delivery"}
+        label="Gmail Delivery"
+        value={googleUserEmail || (googleConnected ? "OAuth Connected" : "Awaiting OAuth")}
+        sub={googleConnected ? "Gmail API · Self-Delivery" : "Google OAuth2 Required"}
         isActive={isEmailActive}
         statusBadge={
           activeStep === "done"
             ? "SENT"
             : isEmailActive
-            ? "DELIVERING"
+            ? "DISPATCHING"
+            : googleConnected
+            ? "READY"
             : undefined
         }
       />

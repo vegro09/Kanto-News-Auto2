@@ -11,7 +11,7 @@ import {
 export type View = "dashboard" | "settings";
 export type ExecutionStep = "idle" | "fetch" | "ai" | "email" | "done" | "error";
 
-const STORAGE_KEY = "kanto-flow-state-v2";
+const STORAGE_KEY = "kanto-flow-state-v3";
 
 export interface ExecutionLogItem {
   timestamp: string;
@@ -30,7 +30,8 @@ export interface PipelineExecutionResult {
   totalArticlesFetched?: number;
   aiSummary?: string;
   emailSentTo?: string;
-  emailPreviewUrl?: string;
+  emailDeliveryMethod?: "gmail_api" | "simulated";
+  gmailMessageId?: string;
   error?: string;
   logs?: ExecutionLogItem[];
 }
@@ -41,9 +42,9 @@ export interface PersistedState {
   hasApiKey: boolean;
   promptInstructions: string;
   scheduledTime: string;
-  recipientEmail: string;
   googleConnected: boolean;
-  smtpConfigured: boolean;
+  googleUserEmail: string;
+  hasGoogleRefreshToken: boolean;
 }
 
 interface FlowContextValue extends PersistedState {
@@ -52,8 +53,6 @@ interface FlowContextValue extends PersistedState {
   setApiKey: (value: string) => void;
   setPromptInstructions: (value: string) => void;
   setScheduledTime: (value: string) => void;
-  setRecipientEmail: (value: string) => void;
-  setGoogleConnected: (value: boolean) => void;
   addSearchUrl: () => void;
   updateSearchUrl: (index: number, url: string) => void;
   removeSearchUrl: (index: number) => void;
@@ -63,6 +62,8 @@ interface FlowContextValue extends PersistedState {
   lastExecution: PipelineExecutionResult | null;
   saveSettingsToBackend: (customUpdates?: Partial<PersistedState>) => Promise<boolean>;
   triggerTestRun: () => Promise<PipelineExecutionResult | null>;
+  initiateGoogleLogin: () => void;
+  disconnectGoogle: () => Promise<void>;
   fetchStatus: () => Promise<void>;
 }
 
@@ -76,12 +77,12 @@ const DEFAULTS: PersistedState = {
   promptInstructions:
     "قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.",
   scheduledTime: "07:00",
-  recipientEmail: "commander@kanto.empire",
   googleConnected: false,
-  smtpConfigured: false,
+  googleUserEmail: "",
+  hasGoogleRefreshToken: false,
 };
 
-const API_BASE = ""; // Relative path works with Vite proxy
+const API_BASE = "";
 
 const FlowContext = createContext<FlowContextValue | null>(null);
 
@@ -107,7 +108,26 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Fetch live settings and status from Express backend on mount
+  // Check URL search params for OAuth redirects (?auth=success&email=...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const authStatus = params.get("auth");
+    const emailParam = params.get("email");
+
+    if (authStatus === "success" && emailParam) {
+      setState((prev) => ({
+        ...prev,
+        googleConnected: true,
+        googleUserEmail: decodeURIComponent(emailParam),
+        hasGoogleRefreshToken: true,
+      }));
+      // Clean up search parameters in URL without refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // Fetch live settings and OAuth status from Express backend on mount
   useEffect(() => {
     async function loadBackendData() {
       try {
@@ -121,9 +141,9 @@ export function FlowProvider({ children }: { children: ReactNode }) {
               hasApiKey: data.settings.hasApiKey ?? false,
               promptInstructions: data.settings.promptInstructions || prev.promptInstructions,
               scheduledTime: data.settings.scheduledTime || prev.scheduledTime,
-              recipientEmail: data.settings.recipientEmail || prev.recipientEmail,
               googleConnected: data.settings.googleConnected ?? prev.googleConnected,
-              smtpConfigured: data.settings.smtpConfigured ?? false,
+              googleUserEmail: data.settings.googleUserEmail || prev.googleUserEmail,
+              hasGoogleRefreshToken: data.settings.hasGoogleRefreshToken ?? prev.hasGoogleRefreshToken,
             }));
           }
         }
@@ -136,7 +156,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch {
-        // Backend not yet reachable or in dev standalone mode
+        // Backend not yet reachable or dev mode
       }
     }
 
@@ -174,6 +194,27 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  // Initiate Google OAuth2 Flow
+  const initiateGoogleLogin = useCallback(() => {
+    // Redirect directly to backend OAuth entry point which requests offline refresh_token
+    window.location.href = `${API_BASE}/api/auth/google`;
+  }, []);
+
+  // Disconnect Google account
+  const disconnectGoogle = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE}/api/auth/google/disconnect`, { method: "POST" });
+      setState((prev) => ({
+        ...prev,
+        googleConnected: false,
+        googleUserEmail: "",
+        hasGoogleRefreshToken: false,
+      }));
+    } catch (err) {
+      console.error("Failed to disconnect Google OAuth:", err);
+    }
+  }, []);
+
   // Synchronize state with Express backend
   const saveSettingsToBackend = useCallback(
     async (customUpdates?: Partial<PersistedState>): Promise<boolean> => {
@@ -195,7 +236,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
             setState((prev) => ({
               ...prev,
               hasApiKey: data.settings.hasApiKey ?? prev.hasApiKey,
-              smtpConfigured: data.settings.smtpConfigured ?? prev.smtpConfigured,
+              googleConnected: data.settings.googleConnected ?? prev.googleConnected,
+              googleUserEmail: data.settings.googleUserEmail || prev.googleUserEmail,
             }));
           }
           return true;
@@ -218,12 +260,10 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setIsExecuting(true);
     setActiveStep("fetch");
 
-    // Simulate animated step progression for visual feedback while waiting for server response
     const fetchTimer = setTimeout(() => setActiveStep("ai"), 900);
     const aiTimer = setTimeout(() => setActiveStep("email"), 2200);
 
     try {
-      // First ensure backend has latest state
       await saveSettingsToBackend();
 
       const res = await fetch(`${API_BASE}/api/trigger-test`, {
@@ -253,7 +293,6 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       return null;
     } finally {
       setIsExecuting(false);
-      // Reset active step back to idle after 4 seconds
       setTimeout(() => {
         setActiveStep("idle");
       }, 4000);
@@ -286,13 +325,13 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       setApiKey: (apiKey) => patch({ apiKey, hasApiKey: Boolean(apiKey && apiKey.length > 5) }),
       setPromptInstructions: (promptInstructions) => patch({ promptInstructions }),
       setScheduledTime: (scheduledTime) => patch({ scheduledTime }),
-      setRecipientEmail: (recipientEmail) => patch({ recipientEmail }),
-      setGoogleConnected: (googleConnected) => patch({ googleConnected }),
       addSearchUrl,
       updateSearchUrl,
       removeSearchUrl,
       saveSettingsToBackend,
       triggerTestRun,
+      initiateGoogleLogin,
+      disconnectGoogle,
       fetchStatus,
     }),
     [
@@ -308,6 +347,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       removeSearchUrl,
       saveSettingsToBackend,
       triggerTestRun,
+      initiateGoogleLogin,
+      disconnectGoogle,
       fetchStatus,
     ]
   );

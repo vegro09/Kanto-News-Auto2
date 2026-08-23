@@ -1,14 +1,14 @@
 import { useState } from "react";
 import FlowCanvas from "@/components/FlowCanvas";
 import { useFlow } from "@/lib/flow-store";
-import { Play, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Clock, Sparkles } from "lucide-react";
+import { Play, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Sparkles, Mail } from "lucide-react";
 
 export default function Dashboard() {
   const {
     searchUrls,
     scheduledTime,
     googleConnected,
-    recipientEmail,
+    googleUserEmail,
     isExecuting,
     activeStep,
     lastExecution,
@@ -24,7 +24,7 @@ export default function Dashboard() {
       case "ai":
         return "2/3 Gemini Arabic Summarization in progress...";
       case "email":
-        return "3/3 Delivering via SMTP...";
+        return "3/3 Dispatching via Gmail API (OAuth2)...";
       case "done":
         return "Pipeline run completed successfully.";
       case "error":
@@ -119,8 +119,9 @@ export default function Dashboard() {
                     <Sparkles className="h-3.5 w-3.5 text-foreground" />
                     AI Summary Engine · Arabic Output
                   </div>
-                  <div className="text-[11px] text-muted-foreground font-mono">
-                    Delivered to: {lastExecution.emailSentTo || recipientEmail}
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                    <Mail className="h-3 w-3" />
+                    Gmail API: {lastExecution.emailSentTo || googleUserEmail || "Self-Delivery"}
                   </div>
                 </div>
                 <div
@@ -138,10 +139,10 @@ export default function Dashboard() {
 
       {/* Footer Info */}
       <footer className="flex flex-wrap items-center gap-x-10 gap-y-2 border-t border-border px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground md:px-10">
-        <span>Schedule · {scheduledTime || "Unset"}</span>
+        <span>Schedule · {scheduledTime || "07:00"}</span>
         <span>Sources · {searchUrls.length} Active</span>
-        <span>Recipient · {recipientEmail}</span>
-        <span>OAuth · {googleConnected ? "Connected" : "SMTP Mode"}</span>
+        <span>Gmail Account · {googleUserEmail || (googleConnected ? "OAuth Connected" : "Unlinked")}</span>
+        <span>Auth · {googleConnected ? "Google OAuth2 (Offline)" : "Awaiting Login"}</span>
         <span className="ml-auto">Kanto Empire · Strict Dynamic Flat UI</span>
       </footer>
     </main>

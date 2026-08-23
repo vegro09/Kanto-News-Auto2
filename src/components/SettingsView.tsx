@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Chrome, Plus, Trash2, Save, Play, Loader2, Sparkles } from "lucide-react";
+import { Check, Chrome, Plus, Trash2, Save, Play, Loader2, KeyRound, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import { useFlow } from "@/lib/flow-store";
 
@@ -33,20 +33,21 @@ export default function SettingsView() {
     hasApiKey,
     promptInstructions,
     scheduledTime,
-    recipientEmail,
     googleConnected,
+    googleUserEmail,
+    hasGoogleRefreshToken,
     isSyncing,
     isExecuting,
     setApiKey,
     setPromptInstructions,
     setScheduledTime,
-    setRecipientEmail,
-    setGoogleConnected,
     addSearchUrl,
     updateSearchUrl,
     removeSearchUrl,
     saveSettingsToBackend,
     triggerTestRun,
+    initiateGoogleLogin,
+    disconnectGoogle,
   } = useFlow();
 
   const [savedStatus, setSavedStatus] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function SettingsView() {
           <div>
             <h1 className="font-serif text-4xl italic text-foreground">Settings</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Configuration persists in-memory and controls the automated workflow.
+              Google OAuth2 & Gmail API automated engine configuration.
             </p>
           </div>
 
@@ -97,49 +98,46 @@ export default function SettingsView() {
         )}
 
         <div className="mt-12 divide-y divide-border border-y border-border">
-          {/* Email Delivery */}
+          {/* Google OAuth2 & Gmail API */}
           <Section
-            title="Email Delivery"
-            description="Recipient email address and authentication method for brief delivery."
+            title="Google OAuth2 & Gmail API Delivery"
+            description="Authorize via Google OAuth2 with offline consent. The engine uses your stored refresh token to send AI digests directly to and from your Google account."
           >
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground font-mono">
-                  Recipient Email
-                </label>
-                <input
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="commander@kanto.empire"
-                  className={inputClass}
-                  aria-label="Recipient email address"
-                />
-              </div>
-
               {googleConnected ? (
-                <div className="flex items-center justify-between rounded-lg border border-foreground px-4 py-3">
-                  <span className="flex items-center gap-3 text-sm text-foreground">
-                    <Check className="h-4 w-4" />
-                    OAuth Connected · {recipientEmail || "Google Account"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setGoogleConnected(false)}
-                    className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                  >
-                    Disconnect
-                  </button>
+                <div className="flex flex-col gap-3 rounded-lg border border-foreground bg-secondary/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm text-foreground font-mono">
+                      <ShieldCheck className="h-4 w-4 text-foreground" />
+                      <span>{googleUserEmail || "Google Account Connected"}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={disconnectGoogle}
+                      className="text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                    <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
+                    <span>Scope: gmail.send · Mode: Self-Delivery (From: You → To: You)</span>
+                  </div>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setGoogleConnected(true)}
-                  className="flex w-full items-center justify-center gap-3 rounded-lg border border-foreground px-4 py-3 text-sm text-foreground transition-colors hover:bg-foreground hover:text-background cursor-pointer"
-                >
-                  <Chrome className="h-4 w-4" />
-                  Sign in with Google OAuth / Switch to SMTP
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={initiateGoogleLogin}
+                    className="flex w-full items-center justify-center gap-3 rounded-lg border border-foreground px-4 py-3 text-sm text-foreground transition-colors hover:bg-foreground hover:text-background cursor-pointer"
+                  >
+                    <Chrome className="h-4 w-4" />
+                    Sign in with Google (OAuth2 + Gmail API)
+                  </button>
+                  <p className="text-[11px] text-muted-foreground font-mono">
+                    Requests offline access to automatically obtain a refresh_token for daily 07:00 AM dispatch.
+                  </p>
+                </div>
               )}
             </div>
           </Section>
@@ -147,7 +145,7 @@ export default function SettingsView() {
           {/* Schedule */}
           <Section
             title="Schedule (node-cron)"
-            description="Daily trigger time in 24-hour format. Automatically recalibrates the cron scheduler."
+            description="Daily trigger time (24-hr HH:mm). Recalibrates the background cron task dynamically."
           >
             <div className="flex items-center gap-4">
               <input
@@ -158,7 +156,7 @@ export default function SettingsView() {
                 aria-label="Scheduled time"
               />
               <span className="text-xs uppercase tracking-widest text-muted-foreground font-mono">
-                Daily Execution
+                Daily Gmail Trigger
               </span>
             </div>
           </Section>
@@ -166,7 +164,7 @@ export default function SettingsView() {
           {/* API Key */}
           <Section
             title="Google Gemini API Key"
-            description="API credential for @google/generative-ai Arabic summarization."
+            description="API credential for @google/generative-ai Arabic summarization pipeline."
           >
             <div className="flex flex-col gap-2">
               <input
@@ -179,7 +177,7 @@ export default function SettingsView() {
                 aria-label="API key"
               />
               <p className="text-[11px] text-muted-foreground font-mono">
-                {hasApiKey ? "✓ API Key configured and verified in backend." : "Key is stored in-memory and in .env for security."}
+                {hasApiKey ? "✓ API Key active in backend." : "Key is stored in-memory and in .env for security."}
               </p>
             </div>
           </Section>
@@ -204,7 +202,7 @@ export default function SettingsView() {
           {/* URL Sources */}
           <Section
             title="URL Sources (RSS / Atom / Web)"
-            description="Each source renders as an active node on the canvas graph and is queried during pipeline execution."
+            description="Sources queried during each scheduled automation run."
           >
             <div className="flex flex-col gap-3">
               {searchUrls.map((url, i) => (
@@ -240,8 +238,8 @@ export default function SettingsView() {
 
           {/* Manual Run Test */}
           <Section
-            title="Manual Test Trigger"
-            description="Execute the complete pipeline immediately (Fetch -> Gemini AI -> Email Delivery)."
+            title="Manual Pipeline Test"
+            description="Execute the complete SaaS flow immediately (Fetch -> Gemini AI -> Gmail API Dispatch)."
           >
             <button
               type="button"
@@ -252,7 +250,7 @@ export default function SettingsView() {
               {isExecuting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Running Pipeline Engine...
+                  Executing Pipeline...
                 </>
               ) : (
                 <>

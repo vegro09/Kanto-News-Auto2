@@ -11,7 +11,8 @@ export interface PipelineExecutionLog {
   totalArticlesFetched?: number;
   aiSummary?: string;
   emailSentTo?: string;
-  emailPreviewUrl?: string;
+  emailDeliveryMethod?: "gmail_api" | "simulated";
+  gmailMessageId?: string;
   error?: string;
   logs: Array<{
     timestamp: string;
@@ -41,16 +42,18 @@ class StateService extends EventEmitter {
       hasApiKey: Boolean(this.settings.apiKey && this.settings.apiKey.length > 5),
       promptInstructions: this.settings.promptInstructions,
       scheduledTime: this.settings.scheduledTime,
-      recipientEmail: this.settings.recipientEmail,
-      googleConnected: this.settings.googleConnected,
-      smtpConfigured: Boolean(this.settings.smtpConfig.host && this.settings.smtpConfig.user),
-      smtpConfig: {
-        host: this.settings.smtpConfig.host,
-        port: this.settings.smtpConfig.port,
-        secure: this.settings.smtpConfig.secure,
-        user: this.settings.smtpConfig.user,
-        pass: this.settings.smtpConfig.pass ? "••••••••" : "",
-        from: this.settings.smtpConfig.from,
+      googleConnected: Boolean(
+        this.settings.googleConnected ||
+          (this.settings.googleOAuth.refreshToken && this.settings.googleOAuth.userEmail)
+      ),
+      googleUserEmail: this.settings.googleOAuth.userEmail || "",
+      hasGoogleRefreshToken: Boolean(this.settings.googleOAuth.refreshToken),
+      googleOAuth: {
+        clientId: this.settings.googleOAuth.clientId
+          ? this.settings.googleOAuth.clientId.slice(0, 10) + "..."
+          : "",
+        redirectUri: this.settings.googleOAuth.redirectUri,
+        userEmail: this.settings.googleOAuth.userEmail,
       },
       geminiModel: this.settings.geminiModel,
     };
@@ -58,22 +61,18 @@ class StateService extends EventEmitter {
 
   updateSettings(updates: Partial<AppSettings>): AppSettings {
     const prevTime = this.settings.scheduledTime;
-    
+
     // Only overwrite apiKey if a non-masked new value is provided
     if (updates.apiKey && updates.apiKey.includes("••••")) {
       delete updates.apiKey;
     }
 
-    if (updates.smtpConfig?.pass && updates.smtpConfig.pass.includes("••••")) {
-      updates.smtpConfig.pass = this.settings.smtpConfig.pass;
-    }
-
     this.settings = {
       ...this.settings,
       ...updates,
-      smtpConfig: {
-        ...this.settings.smtpConfig,
-        ...(updates.smtpConfig || {}),
+      googleOAuth: {
+        ...this.settings.googleOAuth,
+        ...(updates.googleOAuth || {}),
       },
     };
 
@@ -83,6 +82,20 @@ class StateService extends EventEmitter {
 
     this.emit("settingsChanged", this.settings);
     return this.getSettings();
+  }
+
+  setGoogleTokens(refreshToken: string, userEmail: string) {
+    this.settings.googleOAuth.refreshToken = refreshToken;
+    this.settings.googleOAuth.userEmail = userEmail;
+    this.settings.googleConnected = true;
+    this.emit("settingsChanged", this.settings);
+  }
+
+  clearGoogleTokens() {
+    this.settings.googleOAuth.refreshToken = "";
+    this.settings.googleOAuth.userEmail = "";
+    this.settings.googleConnected = false;
+    this.emit("settingsChanged", this.settings);
   }
 
   startExecution(triggerType: "scheduled" | "manual"): PipelineExecutionLog {

@@ -4,13 +4,12 @@ import path from "path";
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-export interface SmtpConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  user: string;
-  pass: string;
-  from: string;
+export interface GoogleOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  refreshToken: string;
+  userEmail: string;
 }
 
 export interface AppSettings {
@@ -18,9 +17,8 @@ export interface AppSettings {
   apiKey: string;
   promptInstructions: string;
   scheduledTime: string;
-  recipientEmail: string;
   googleConnected: boolean;
-  smtpConfig: SmtpConfig;
+  googleOAuth: GoogleOAuthConfig;
   geminiModel: string;
 }
 
@@ -41,15 +39,14 @@ export const initialConfig: AppSettings = {
   apiKey: process.env.GEMINI_API_KEY || "",
   promptInstructions: process.env.PROMPT_INSTRUCTIONS || DEFAULT_PROMPT_INSTRUCTIONS,
   scheduledTime: DEFAULT_SCHEDULED_TIME,
-  recipientEmail: process.env.RECIPIENT_EMAIL || "commander@kanto.empire",
-  googleConnected: Boolean(process.env.GOOGLE_CONNECTED === "true" || process.env.SMTP_USER),
-  smtpConfig: {
-    host: process.env.SMTP_HOST || "",
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
-    secure: process.env.SMTP_SECURE === "true",
-    user: process.env.SMTP_USER || "",
-    pass: process.env.SMTP_PASS || "",
-    from: process.env.SMTP_FROM || '"Kanto Automator" <flow@kanto.empire>',
+  googleConnected: Boolean(process.env.GOOGLE_REFRESH_TOKEN || process.env.GOOGLE_USER_EMAIL),
+  googleOAuth: {
+    clientId: process.env.GOOGLE_CLIENT_ID || "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    redirectUri:
+      process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/auth/google/callback",
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN || "",
+    userEmail: process.env.GOOGLE_USER_EMAIL || "",
   },
   geminiModel: process.env.GEMINI_MODEL || "gemini-1.5-flash",
 };
