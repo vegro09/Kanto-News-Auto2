@@ -1,5 +1,5 @@
 import { Cpu, Globe, Mail, Timer, type LucideIcon } from "lucide-react";
-import { useFlow } from "@/lib/flow-store";
+import { useFlow, ExecutionStep } from "@/lib/flow-store";
 
 const NODE_W = 240;
 const NODE_H = 76;
@@ -24,12 +24,14 @@ function Edge({
   y1,
   x2,
   y2,
+  active = false,
   ghost = false,
 }: {
   x1: number;
   y1: number;
   x2: number;
   y2: number;
+  active?: boolean;
   ghost?: boolean;
 }) {
   const dx = Math.max(60, (x2 - x1) / 2);
@@ -38,10 +40,10 @@ function Edge({
       d={`M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`}
       fill="none"
       stroke="var(--color-foreground)"
-      strokeOpacity={ghost ? 0.3 : 0.9}
-      strokeWidth={1}
-      strokeDasharray="5 7"
-      className="edge-flow"
+      strokeOpacity={ghost ? 0.25 : active ? 1 : 0.8}
+      strokeWidth={active ? 1.5 : 1}
+      strokeDasharray={active ? "3 3" : "5 7"}
+      className={active ? "edge-flow" : "edge-flow"}
     />
   );
 }
@@ -53,6 +55,8 @@ function FlowNode({
   label,
   value,
   sub,
+  statusBadge,
+  isActive = false,
   ghost = false,
 }: {
   x: number;
@@ -61,31 +65,59 @@ function FlowNode({
   label: string;
   value: string;
   sub?: string | undefined;
+  statusBadge?: string;
+  isActive?: boolean;
   ghost?: boolean;
 }) {
   return (
     <foreignObject x={x} y={y} width={NODE_W} height={NODE_H}>
       <div
-        className={`flex h-full w-full items-center gap-3 rounded-lg border bg-background px-4 ${
-          ghost ? "border-dashed border-border" : "border-foreground"
+        className={`flex h-full w-full items-center justify-between gap-3 rounded-lg border bg-background px-4 transition-colors ${
+          isActive
+            ? "border-foreground bg-secondary/40"
+            : ghost
+            ? "border-dashed border-border"
+            : "border-border hover:border-foreground"
         }`}
       >
-        <Icon
-          className={`h-4 w-4 shrink-0 ${ghost ? "text-muted-foreground" : "text-foreground"}`}
-        />
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-            {label}
-          </span>
-          <span
-            className={`truncate text-sm ${ghost ? "text-muted-foreground" : "text-foreground"}`}
-          >
-            {value}
-          </span>
-          {sub ? (
-            <span className="truncate text-[11px] text-muted-foreground">{sub}</span>
-          ) : null}
+        <div className="flex min-w-0 items-center gap-3 overflow-hidden">
+          <Icon
+            className={`h-4 w-4 shrink-0 ${
+              isActive
+                ? "text-foreground"
+                : ghost
+                ? "text-muted-foreground"
+                : "text-foreground"
+            }`}
+          />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+              {label}
+            </span>
+            <span
+              className={`truncate text-sm font-medium ${
+                ghost ? "text-muted-foreground" : "text-foreground"
+              }`}
+            >
+              {value}
+            </span>
+            {sub ? (
+              <span className="truncate text-[11px] text-muted-foreground">{sub}</span>
+            ) : null}
+          </div>
         </div>
+
+        {statusBadge ? (
+          <span
+            className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] uppercase tracking-wider ${
+              isActive
+                ? "border-foreground bg-foreground text-background font-bold"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {statusBadge}
+          </span>
+        ) : null}
       </div>
     </foreignObject>
   );
@@ -107,7 +139,15 @@ function ColumnCaption({ x, children }: { x: number; children: string }) {
 }
 
 export default function FlowCanvas() {
-  const { searchUrls, scheduledTime, promptInstructions, googleConnected } = useFlow();
+  const {
+    searchUrls,
+    scheduledTime,
+    promptInstructions,
+    googleConnected,
+    recipientEmail,
+    activeStep,
+    isExecuting,
+  } = useFlow();
 
   const hasSources = searchUrls.length > 0;
   const colCount = Math.max(searchUrls.length, 1);
@@ -126,6 +166,11 @@ export default function FlowCanvas() {
     x: xCol(1),
     y: searchTop + i * (NODE_H + ROW_GAP),
   }));
+
+  const isTimerActive = activeStep === "fetch" || (isExecuting && activeStep === "idle");
+  const isFetchActive = activeStep === "fetch";
+  const isAiActive = activeStep === "ai";
+  const isEmailActive = activeStep === "email" || activeStep === "done";
 
   return (
     <svg
@@ -146,6 +191,7 @@ export default function FlowCanvas() {
           y1={midY(timer.y)}
           x2={s.x}
           y2={midY(s.y)}
+          active={isTimerActive || isFetchActive}
           ghost={!hasSources}
         />
       ))}
@@ -156,6 +202,7 @@ export default function FlowCanvas() {
           y1={midY(s.y)}
           x2={ai.x}
           y2={midY(ai.y)}
+          active={isAiActive}
           ghost={!hasSources}
         />
       ))}
@@ -164,6 +211,7 @@ export default function FlowCanvas() {
         y1={midY(ai.y)}
         x2={email.x}
         y2={midY(email.y)}
+        active={isEmailActive}
       />
 
       <FlowNode
@@ -172,8 +220,11 @@ export default function FlowCanvas() {
         icon={Timer}
         label="Timer"
         value={scheduledTime || "—"}
-        sub="Daily trigger"
+        sub="Daily cron trigger"
+        isActive={isTimerActive}
+        statusBadge={isTimerActive ? "TRIGGER" : "ACTIVE"}
       />
+
       {sources.map((s, i) =>
         hasSources ? (
           <FlowNode
@@ -181,9 +232,11 @@ export default function FlowCanvas() {
             x={s.x}
             y={s.y}
             icon={Globe}
-            label={`Search ${String(i + 1).padStart(2, "0")}`}
+            label={`Source ${String(i + 1).padStart(2, "0")}`}
             value={s.url || "Empty URL"}
             sub={hostname(s.url)}
+            isActive={isFetchActive}
+            statusBadge={isFetchActive ? "FETCHING" : undefined}
           />
         ) : (
           <FlowNode
@@ -191,28 +244,40 @@ export default function FlowCanvas() {
             x={s.x}
             y={s.y}
             icon={Globe}
-            label="Search 00"
+            label="Source 00"
             value="No sources configured"
             sub="Add URLs in Settings"
             ghost
           />
-        ),
+        )
       )}
+
       <FlowNode
         x={ai.x}
         y={ai.y}
         icon={Cpu}
         label="AI Engine"
-        value="Prompt Pipeline"
-        sub={promptInstructions || undefined}
+        value="Gemini Summarizer"
+        sub={promptInstructions ? promptInstructions.slice(0, 32) + "..." : "Arabic digest prompt"}
+        isActive={isAiActive}
+        statusBadge={isAiActive ? "SUMMARIZING" : undefined}
       />
+
       <FlowNode
         x={email.x}
         y={email.y}
         icon={Mail}
         label="Email Delivery"
-        value={googleConnected ? "Connected" : "Not connected"}
-        sub={googleConnected ? "OAuth · Google" : "Awaiting OAuth"}
+        value={recipientEmail || (googleConnected ? "Google Connected" : "Local Dispatch")}
+        sub={googleConnected ? "OAuth · Google" : "SMTP Delivery"}
+        isActive={isEmailActive}
+        statusBadge={
+          activeStep === "done"
+            ? "SENT"
+            : isEmailActive
+            ? "DELIVERING"
+            : undefined
+        }
       />
     </svg>
   );
