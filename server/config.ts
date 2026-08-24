@@ -4,21 +4,11 @@ import path from "path";
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-export interface GoogleOAuthConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  refreshToken: string;
-  userEmail: string;
-}
-
 export interface AppSettings {
   searchUrls: string[];
   apiKey: string;
   promptInstructions: string;
   scheduledTime: string;
-  googleConnected: boolean;
-  googleOAuth: GoogleOAuthConfig;
   geminiModel: string;
 }
 
@@ -39,15 +29,6 @@ export const initialConfig: AppSettings = {
   apiKey: process.env.GEMINI_API_KEY || "",
   promptInstructions: process.env.PROMPT_INSTRUCTIONS || DEFAULT_PROMPT_INSTRUCTIONS,
   scheduledTime: DEFAULT_SCHEDULED_TIME,
-  googleConnected: Boolean(process.env.GOOGLE_REFRESH_TOKEN || process.env.GOOGLE_USER_EMAIL),
-  googleOAuth: {
-    clientId: process.env.GOOGLE_CLIENT_ID || "",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    redirectUri:
-      process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/auth/google/callback",
-    refreshToken: process.env.GOOGLE_REFRESH_TOKEN || "",
-    userEmail: process.env.GOOGLE_USER_EMAIL || "",
-  },
   geminiModel: process.env.GEMINI_MODEL || "gemini-1.5-flash",
 };
 

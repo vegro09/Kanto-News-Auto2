@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { AppSettings, initialConfig } from "../config";
+import { StoredSummary } from "./storage.service";
 
 export interface PipelineExecutionLog {
   id: string;
@@ -10,13 +11,11 @@ export interface PipelineExecutionLog {
   sourcesProcessed?: number;
   totalArticlesFetched?: number;
   aiSummary?: string;
-  emailSentTo?: string;
-  emailDeliveryMethod?: "gmail_api" | "simulated";
-  gmailMessageId?: string;
+  summaryId?: string;
   error?: string;
   logs: Array<{
     timestamp: string;
-    step: "fetch" | "ai" | "email" | "system";
+    step: "fetch" | "ai" | "storage" | "system";
     level: "info" | "warn" | "error";
     message: string;
   }>;
@@ -42,19 +41,6 @@ class StateService extends EventEmitter {
       hasApiKey: Boolean(this.settings.apiKey && this.settings.apiKey.length > 5),
       promptInstructions: this.settings.promptInstructions,
       scheduledTime: this.settings.scheduledTime,
-      googleConnected: Boolean(
-        this.settings.googleConnected ||
-          (this.settings.googleOAuth.refreshToken && this.settings.googleOAuth.userEmail)
-      ),
-      googleUserEmail: this.settings.googleOAuth.userEmail || "",
-      hasGoogleRefreshToken: Boolean(this.settings.googleOAuth.refreshToken),
-      googleOAuth: {
-        clientId: this.settings.googleOAuth.clientId
-          ? this.settings.googleOAuth.clientId.slice(0, 10) + "..."
-          : "",
-        redirectUri: this.settings.googleOAuth.redirectUri,
-        userEmail: this.settings.googleOAuth.userEmail,
-      },
       geminiModel: this.settings.geminiModel,
     };
   }
@@ -70,10 +56,6 @@ class StateService extends EventEmitter {
     this.settings = {
       ...this.settings,
       ...updates,
-      googleOAuth: {
-        ...this.settings.googleOAuth,
-        ...(updates.googleOAuth || {}),
-      },
     };
 
     if (updates.scheduledTime && updates.scheduledTime !== prevTime) {
@@ -82,20 +64,6 @@ class StateService extends EventEmitter {
 
     this.emit("settingsChanged", this.settings);
     return this.getSettings();
-  }
-
-  setGoogleTokens(refreshToken: string, userEmail: string) {
-    this.settings.googleOAuth.refreshToken = refreshToken;
-    this.settings.googleOAuth.userEmail = userEmail;
-    this.settings.googleConnected = true;
-    this.emit("settingsChanged", this.settings);
-  }
-
-  clearGoogleTokens() {
-    this.settings.googleOAuth.refreshToken = "";
-    this.settings.googleOAuth.userEmail = "";
-    this.settings.googleConnected = false;
-    this.emit("settingsChanged", this.settings);
   }
 
   startExecution(triggerType: "scheduled" | "manual"): PipelineExecutionLog {
@@ -120,7 +88,7 @@ class StateService extends EventEmitter {
   }
 
   appendLog(
-    step: "fetch" | "ai" | "email" | "system",
+    step: "fetch" | "ai" | "storage" | "system",
     level: "info" | "warn" | "error",
     message: string
   ) {

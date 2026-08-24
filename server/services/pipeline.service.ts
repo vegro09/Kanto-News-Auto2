@@ -1,7 +1,7 @@
 import { stateService, PipelineExecutionLog } from "./state.service";
 import { fetcherService } from "./fetcher.service";
 import { aiService } from "./ai.service";
-import { gmailService } from "./gmail.service";
+import { storageService, StoredSummary } from "./storage.service";
 
 export class PipelineService {
   private isRunning = false;
@@ -40,19 +40,36 @@ export class PipelineService {
         settings.apiKey
       );
 
-      // Step 3: Gmail API Email Delivery (Self-Delivery: To = From = UserEmail)
+      // Step 3: Local Storage / Archiving
       stateService.appendLog(
         "system",
         "info",
-        `[Phase 3/3] Delivering summary digest via Gmail API (OAuth2)...`
+        `[Phase 3/3] Saving generated AI digest to local archive (data/summaries.json)...`
       );
-      const emailResult = await gmailService.sendSummaryEmail(aiResult.summaryArabic);
 
       const durationMs = Date.now() - startTime;
+      const savedSummary = storageService.saveSummary({
+        title: `موجز Kanto الذكي - ${new Date().toLocaleDateString("ar-SA")}`,
+        summaryArabic: aiResult.summaryArabic,
+        triggerType,
+        durationMs,
+        sourcesProcessed: sources.length,
+        totalArticlesFetched: totalArticles,
+        sources: sources.map((s) => ({
+          title: s.title,
+          hostname: s.hostname,
+          articlesCount: s.articles.length,
+          url: s.url,
+        })),
+        promptInstructions: settings.promptInstructions,
+        model: aiResult.model,
+        isMock: aiResult.isMock,
+      });
+
       stateService.appendLog(
-        "system",
+        "storage",
         "info",
-        `Pipeline execution successfully completed in ${(durationMs / 1000).toFixed(2)}s.`
+        `Summary archived successfully (ID: ${savedSummary.id}). Total saved in local library: ${storageService.getTotalCount()}`
       );
 
       const completed = stateService.completeExecution({
@@ -61,9 +78,7 @@ export class PipelineService {
         sourcesProcessed: sources.length,
         totalArticlesFetched: totalArticles,
         aiSummary: aiResult.summaryArabic,
-        emailSentTo: emailResult.recipient,
-        emailDeliveryMethod: emailResult.deliveryMethod,
-        gmailMessageId: emailResult.messageId,
+        summaryId: savedSummary.id,
       });
 
       return completed;

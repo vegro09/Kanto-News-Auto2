@@ -1,0 +1,29 @@
+[
+  {
+    "id": "summary_1787577197164",
+    "timestamp": "2026-08-24T13:13:17.165Z",
+    "title": "موجز Kanto الذكي - ٢٤‏/٨‏/٢٠٢٦",
+    "summaryArabic": "# ⚡ موجز Kanto Automator الذكي (معاينة تجريبية)\n*تم الإنشاء في: ٢٤‏/٨‏/٢٠٢٦، ٤:١٣:١٧ م*\n\n> [!NOTE]\n> هذا ملخص تم إنشاؤه عبر المحرك التجريبي لعدم توفر مفتاح `GEMINI_API_KEY`. لتفعيل الذكاء الكامل، أضف مفتاحك في قسم الإعدادات.\n\n---\n\n### 📌 ملخص المصادر المجلوبة (2 مصادر):\n- **Hacker News** (10 عناصر)\n- **The Verge** (10 عناصر)\n\n### 🔍 أهم العناوين الملتقطة:\n1. **SeL4 security proofs now complete on AArch64**\n   الرابط: [https://proofcraft.systems/news-2026/#2026-08-21](https://proofcraft.systems/news-2026/#2026-08-21)\n   الموجز: Comments\n\n2. **I were 17, I'd learn how to build LLMs from scratch**\n   الرابط: [https://twitter.com/paulg/status/2091544343589060625](https://twitter.com/paulg/status/2091544343589060625)\n   الموجز: Comments\n\n3. **Everything I own, owned**\n   الرابط: [https://schlarp.com/posts/everything-i-own-owned/](https://schlarp.com/posts/everything-i-own-owned/)\n   الموجز: Comments\n\n4. **De-Googled GrapheneOS is coming to Motorola’s foldables next year**\n   الرابط: [https://www.theverge.com/tech/983714/grapheneos-motorola-razr-fold-ultra-support-pixel-11](https://www.theverge.com/tech/983714/grapheneos-motorola-razr-fold-ultra-support-pixel-11)\n   الموجز: The Razr Ultra line is among those due to receive GrapheneOS support next year. | Photo: Allison Johnson / The Verge GrapheneOS, an open source version of Android that prioritizes security and privacy, has detailed its plans for supporting Motorola smartphones. Official support is set to arrive next year, starting with traditional flagships, before rolling out to Motorola's foldable phones and per\n\n5. **Humanoid robots smash Usain Bolt&#8217;s 100-meter record**\n   الرابط: [https://www.theverge.com/tech/983688/world-humanoid-robot-games-sprint-record-2026](https://www.theverge.com/tech/983688/world-humanoid-robot-games-sprint-record-2026)\n   الموجز: Tiangong Ultra (left) also broke the 400 meter world record during this year’s World Humanoid Robot Games. | Image: Lintao Zhang/Getty Images The 9.58-second 100-meter dash record set by Usain Bolt in 2009 has been outpaced by Chinese robots participating at the World Humanoid Robot Games in Beijing. In a preliminary heat on Saturday, Tiangong Ultra, made by the Beijing Humanoid Robot Innovation ​\n\n6. **GTA VI: all the news on Rockstar’s next entry in the Grand Theft Auto series**\n   الرابط: [https://www.theverge.com/23987993/gta-6-news-trailers-rockstar-games](https://www.theverge.com/23987993/gta-6-news-trailers-rockstar-games)\n   الموجز: It’s been over a decade and two console generations since GTA V came out, and its sequel is still a work in progress. GTA VI has faced multiple delays, with developer Rockstar Games bumping back its predicted release date twice, first to May 26th, 2026, then again to November 19th, 2026, a full year after its originally planned release window of fall 2025, and facing accusations of union busting a\n\n---\n\n### 🎯 التعليمات المطبقة:\n\"قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.\"\n\n### 💡 التوصية:\nقم بتهيئة مفتاح Google Gemini API في ملف `.env` أو واجهة الإعدادات للحصول على التحليل اللغوي المتقدم وتلخيص الذكاء الاصطناعي الكامل.",
+    "triggerType": "manual",
+    "durationMs": 818,
+    "sourcesProcessed": 2,
+    "totalArticlesFetched": 20,
+    "sources": [
+      {
+        "title": "Hacker News",
+        "hostname": "news.ycombinator.com",
+        "articlesCount": 10,
+        "url": "https://news.ycombinator.com/rss"
+      },
+      {
+        "title": "The Verge",
+        "hostname": "www.theverge.com",
+        "articlesCount": 10,
+        "url": "https://www.theverge.com/rss/index.xml"
+      }
+    ],
+    "promptInstructions": "قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.",
+    "model": "mock-engine",
+    "isMock": true
+  }
+]

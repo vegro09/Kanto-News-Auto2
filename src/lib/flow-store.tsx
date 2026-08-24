@@ -9,13 +9,33 @@ import {
 } from "react";
 
 export type View = "dashboard" | "settings";
-export type ExecutionStep = "idle" | "fetch" | "ai" | "email" | "done" | "error";
+export type ExecutionStep = "idle" | "fetch" | "ai" | "storage" | "done" | "error";
 
-const STORAGE_KEY = "kanto-flow-state-v3";
+const STORAGE_KEY = "kanto-flow-state-v4";
+
+export interface StoredSummaryItem {
+  id: string;
+  timestamp: string;
+  title: string;
+  summaryArabic: string;
+  triggerType: "scheduled" | "manual";
+  durationMs: number;
+  sourcesProcessed: number;
+  totalArticlesFetched: number;
+  sources: Array<{
+    title: string;
+    hostname: string;
+    articlesCount: number;
+    url: string;
+  }>;
+  promptInstructions: string;
+  model: string;
+  isMock?: boolean;
+}
 
 export interface ExecutionLogItem {
   timestamp: string;
-  step: "fetch" | "ai" | "email" | "system";
+  step: "fetch" | "ai" | "storage" | "system";
   level: "info" | "warn" | "error";
   message: string;
 }
@@ -29,9 +49,7 @@ export interface PipelineExecutionResult {
   sourcesProcessed?: number;
   totalArticlesFetched?: number;
   aiSummary?: string;
-  emailSentTo?: string;
-  emailDeliveryMethod?: "gmail_api" | "simulated";
-  gmailMessageId?: string;
+  summaryId?: string;
   error?: string;
   logs?: ExecutionLogItem[];
 }
@@ -42,9 +60,6 @@ export interface PersistedState {
   hasApiKey: boolean;
   promptInstructions: string;
   scheduledTime: string;
-  googleConnected: boolean;
-  googleUserEmail: string;
-  hasGoogleRefreshToken: boolean;
 }
 
 interface FlowContextValue extends PersistedState {
@@ -60,10 +75,13 @@ interface FlowContextValue extends PersistedState {
   isExecuting: boolean;
   activeStep: ExecutionStep;
   lastExecution: PipelineExecutionResult | null;
+  summaries: StoredSummaryItem[];
+  selectedSummary: StoredSummaryItem | null;
+  selectSummary: (id: string | null) => void;
+  deleteSummary: (id: string) => Promise<void>;
+  fetchSummaries: () => Promise<void>;
   saveSettingsToBackend: (customUpdates?: Partial<PersistedState>) => Promise<boolean>;
   triggerTestRun: () => Promise<PipelineExecutionResult | null>;
-  initiateGoogleLogin: () => void;
-  disconnectGoogle: () => Promise<void>;
   fetchStatus: () => Promise<void>;
 }
 
@@ -77,9 +95,6 @@ const DEFAULTS: PersistedState = {
   promptInstructions:
     "قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.",
   scheduledTime: "07:00",
-  googleConnected: false,
-  googleUserEmail: "",
-  hasGoogleRefreshToken: false,
 };
 
 const API_BASE = "";
@@ -94,6 +109,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [activeStep, setActiveStep] = useState<ExecutionStep>("idle");
   const [lastExecution, setLastExecution] = useState<PipelineExecutionResult | null>(null);
+  const [summaries, setSummaries] = useState<StoredSummaryItem[]>([]);
+  const [selectedSummaryId, setSelectedSummaryId] = useState<string | null>(null);
 
   // Hydrate from localStorage first
   useEffect(() => {
@@ -108,26 +125,24 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Check URL search params for OAuth redirects (?auth=success&email=...)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const authStatus = params.get("auth");
-    const emailParam = params.get("email");
-
-    if (authStatus === "success" && emailParam) {
-      setState((prev) => ({
-        ...prev,
-        googleConnected: true,
-        googleUserEmail: decodeURIComponent(emailParam),
-        hasGoogleRefreshToken: true,
-      }));
-      // Clean up search parameters in URL without refresh
-      window.history.replaceState({}, document.title, window.location.pathname);
+  const fetchSummaries = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/summaries`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.summaries)) {
+          setSummaries(data.summaries);
+          if (!selectedSummaryId && data.summaries.length > 0) {
+            setSelectedSummaryId(data.summaries[0].id);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch summaries list:", err);
     }
-  }, []);
+  }, [selectedSummaryId]);
 
-  // Fetch live settings and OAuth status from Express backend on mount
+  // Fetch live settings and summaries from Express backend on mount
   useEffect(() => {
     async function loadBackendData() {
       try {
@@ -141,12 +156,11 @@ export function FlowProvider({ children }: { children: ReactNode }) {
               hasApiKey: data.settings.hasApiKey ?? false,
               promptInstructions: data.settings.promptInstructions || prev.promptInstructions,
               scheduledTime: data.settings.scheduledTime || prev.scheduledTime,
-              googleConnected: data.settings.googleConnected ?? prev.googleConnected,
-              googleUserEmail: data.settings.googleUserEmail || prev.googleUserEmail,
-              hasGoogleRefreshToken: data.settings.hasGoogleRefreshToken ?? prev.hasGoogleRefreshToken,
             }));
           }
         }
+
+        await fetchSummaries();
 
         const statusRes = await fetch(`${API_BASE}/api/status`);
         if (statusRes.ok) {
@@ -161,7 +175,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }
 
     loadBackendData();
-  }, []);
+  }, [fetchSummaries]);
 
   // Persist to localStorage
   useEffect(() => {
@@ -194,26 +208,24 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // Initiate Google OAuth2 Flow
-  const initiateGoogleLogin = useCallback(() => {
-    // Redirect directly to backend OAuth entry point which requests offline refresh_token
-    window.location.href = `${API_BASE}/api/auth/google`;
+  const selectSummary = useCallback((id: string | null) => {
+    setSelectedSummaryId(id);
   }, []);
 
-  // Disconnect Google account
-  const disconnectGoogle = useCallback(async () => {
+  const deleteSummary = useCallback(async (id: string) => {
     try {
-      await fetch(`${API_BASE}/api/auth/google/disconnect`, { method: "POST" });
-      setState((prev) => ({
-        ...prev,
-        googleConnected: false,
-        googleUserEmail: "",
-        hasGoogleRefreshToken: false,
-      }));
+      await fetch(`${API_BASE}/api/summaries/${id}`, { method: "DELETE" });
+      setSummaries((prev) => prev.filter((s) => s.id !== id));
+      if (selectedSummaryId === id) {
+        setSelectedSummaryId((prev) => {
+          const remaining = summaries.filter((s) => s.id !== id);
+          return remaining.length > 0 ? remaining[0].id : null;
+        });
+      }
     } catch (err) {
-      console.error("Failed to disconnect Google OAuth:", err);
+      console.error("Failed to delete summary:", err);
     }
-  }, []);
+  }, [selectedSummaryId, summaries]);
 
   // Synchronize state with Express backend
   const saveSettingsToBackend = useCallback(
@@ -236,8 +248,6 @@ export function FlowProvider({ children }: { children: ReactNode }) {
             setState((prev) => ({
               ...prev,
               hasApiKey: data.settings.hasApiKey ?? prev.hasApiKey,
-              googleConnected: data.settings.googleConnected ?? prev.googleConnected,
-              googleUserEmail: data.settings.googleUserEmail || prev.googleUserEmail,
             }));
           }
           return true;
@@ -261,7 +271,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     setActiveStep("fetch");
 
     const fetchTimer = setTimeout(() => setActiveStep("ai"), 900);
-    const aiTimer = setTimeout(() => setActiveStep("email"), 2200);
+    const aiTimer = setTimeout(() => setActiveStep("storage"), 2200);
 
     try {
       await saveSettingsToBackend();
@@ -279,6 +289,10 @@ export function FlowProvider({ children }: { children: ReactNode }) {
         if (data.result) {
           setLastExecution(data.result);
           setActiveStep(data.result.status === "success" ? "done" : "error");
+          await fetchSummaries();
+          if (data.result.summaryId) {
+            setSelectedSummaryId(data.result.summaryId);
+          }
           return data.result;
         }
       }
@@ -297,7 +311,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
         setActiveStep("idle");
       }, 4000);
     }
-  }, [isExecuting, saveSettingsToBackend]);
+  }, [isExecuting, saveSettingsToBackend, fetchSummaries]);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -313,6 +327,11 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const selectedSummary = useMemo(() => {
+    if (!selectedSummaryId) return summaries[0] || null;
+    return summaries.find((s) => s.id === selectedSummaryId) || summaries[0] || null;
+  }, [selectedSummaryId, summaries]);
+
   const value = useMemo<FlowContextValue>(
     () => ({
       ...state,
@@ -321,6 +340,11 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       isExecuting,
       activeStep,
       lastExecution,
+      summaries,
+      selectedSummary,
+      selectSummary,
+      deleteSummary,
+      fetchSummaries,
       toggleView: () => setView((v) => (v === "dashboard" ? "settings" : "dashboard")),
       setApiKey: (apiKey) => patch({ apiKey, hasApiKey: Boolean(apiKey && apiKey.length > 5) }),
       setPromptInstructions: (promptInstructions) => patch({ promptInstructions }),
@@ -330,8 +354,6 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       removeSearchUrl,
       saveSettingsToBackend,
       triggerTestRun,
-      initiateGoogleLogin,
-      disconnectGoogle,
       fetchStatus,
     }),
     [
@@ -341,14 +363,17 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       isExecuting,
       activeStep,
       lastExecution,
+      summaries,
+      selectedSummary,
+      selectSummary,
+      deleteSummary,
+      fetchSummaries,
       patch,
       addSearchUrl,
       updateSearchUrl,
       removeSearchUrl,
       saveSettingsToBackend,
       triggerTestRun,
-      initiateGoogleLogin,
-      disconnectGoogle,
       fetchStatus,
     ]
   );

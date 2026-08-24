@@ -1,4 +1,4 @@
-import { Cpu, Globe, Mail, Timer, type LucideIcon } from "lucide-react";
+import { Cpu, Globe, FolderArchive, Timer, type LucideIcon } from "lucide-react";
 import { useFlow } from "@/lib/flow-store";
 
 const NODE_W = 240;
@@ -91,7 +91,7 @@ function FlowNode({
             }`}
           />
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+            <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground font-mono">
               {label}
             </span>
             <span
@@ -102,14 +102,14 @@ function FlowNode({
               {value}
             </span>
             {sub ? (
-              <span className="truncate text-[11px] text-muted-foreground">{sub}</span>
+              <span className="truncate text-[11px] text-muted-foreground font-mono">{sub}</span>
             ) : null}
           </div>
         </div>
 
         {statusBadge ? (
           <span
-            className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] uppercase tracking-wider ${
+            className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-mono ${
               isActive
                 ? "border-foreground bg-foreground text-background font-bold"
                 : "border-border text-muted-foreground"
@@ -131,7 +131,7 @@ function ColumnCaption({ x, children }: { x: number; children: string }) {
       textAnchor="middle"
       fontSize={10}
       letterSpacing={3}
-      className="fill-muted-foreground uppercase"
+      className="fill-muted-foreground uppercase font-mono"
     >
       {children}
     </text>
@@ -143,8 +143,7 @@ export default function FlowCanvas() {
     searchUrls,
     scheduledTime,
     promptInstructions,
-    googleConnected,
-    googleUserEmail,
+    summaries,
     activeStep,
     isExecuting,
   } = useFlow();
@@ -158,7 +157,7 @@ export default function FlowCanvas() {
 
   const timer = { x: xCol(0), y: centerY - NODE_H / 2 };
   const ai = { x: xCol(2), y: centerY - NODE_H / 2 };
-  const email = { x: xCol(3), y: centerY - NODE_H / 2 };
+  const storage = { x: xCol(3), y: centerY - NODE_H / 2 };
 
   const searchTop = centerY - colHeight / 2;
   const sources = (hasSources ? searchUrls : [""]).map((url, i) => ({
@@ -170,19 +169,19 @@ export default function FlowCanvas() {
   const isTimerActive = activeStep === "fetch" || (isExecuting && activeStep === "idle");
   const isFetchActive = activeStep === "fetch";
   const isAiActive = activeStep === "ai";
-  const isEmailActive = activeStep === "email" || activeStep === "done";
+  const isStorageActive = activeStep === "storage" || activeStep === "done";
 
   return (
     <svg
       viewBox={`0 0 ${width} ${height}`}
       className="h-auto w-full min-w-[880px]"
       role="img"
-      aria-label="Automation flow: timer triggers search sources, feeding an AI engine and Gmail API delivery"
+      aria-label="Automation flow: timer triggers search sources, feeding an AI engine and saving to local storage"
     >
       <ColumnCaption x={timer.x}>Trigger</ColumnCaption>
       <ColumnCaption x={xCol(1)}>Sources</ColumnCaption>
       <ColumnCaption x={ai.x}>Processing</ColumnCaption>
-      <ColumnCaption x={email.x}>Output</ColumnCaption>
+      <ColumnCaption x={storage.x}>Archive</ColumnCaption>
 
       {sources.map((s, i) => (
         <Edge
@@ -209,9 +208,9 @@ export default function FlowCanvas() {
       <Edge
         x1={ai.x + NODE_W}
         y1={midY(ai.y)}
-        x2={email.x}
-        y2={midY(email.y)}
-        active={isEmailActive}
+        x2={storage.x}
+        y2={midY(storage.y)}
+        active={isStorageActive}
       />
 
       <FlowNode
@@ -219,8 +218,8 @@ export default function FlowCanvas() {
         y={timer.y}
         icon={Timer}
         label="Timer"
-        value={scheduledTime || "—"}
-        sub="Daily 07:00 AM Cron"
+        value={scheduledTime || "07:00"}
+        sub="Daily cron trigger"
         isActive={isTimerActive}
         statusBadge={isTimerActive ? "TRIGGER" : "ACTIVE"}
       />
@@ -258,27 +257,25 @@ export default function FlowCanvas() {
         icon={Cpu}
         label="AI Engine"
         value="Gemini Summarizer"
-        sub={promptInstructions ? promptInstructions.slice(0, 30) + "..." : "Arabic digest prompt"}
+        sub={promptInstructions ? promptInstructions.slice(0, 28) + "..." : "Arabic brief pipeline"}
         isActive={isAiActive}
         statusBadge={isAiActive ? "SUMMARIZING" : undefined}
       />
 
       <FlowNode
-        x={email.x}
-        y={email.y}
-        icon={Mail}
-        label="Gmail Delivery"
-        value={googleUserEmail || (googleConnected ? "OAuth Connected" : "Awaiting OAuth")}
-        sub={googleConnected ? "Gmail API · Self-Delivery" : "Google OAuth2 Required"}
-        isActive={isEmailActive}
+        x={storage.x}
+        y={storage.y}
+        icon={FolderArchive}
+        label="Local Storage"
+        value={`${summaries.length} Briefs Archived`}
+        sub="data/summaries.json"
+        isActive={isStorageActive}
         statusBadge={
           activeStep === "done"
-            ? "SENT"
-            : isEmailActive
-            ? "DISPATCHING"
-            : googleConnected
-            ? "READY"
-            : undefined
+            ? "SAVED"
+            : isStorageActive
+            ? "ARCHIVING"
+            : "PERSISTENT"
         }
       />
     </svg>
