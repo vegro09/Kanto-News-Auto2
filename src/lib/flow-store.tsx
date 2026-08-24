@@ -93,7 +93,7 @@ const DEFAULTS: PersistedState = {
   apiKey: "",
   hasApiKey: false,
   promptInstructions:
-    "قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.",
+    "Synthesize the gathered material into a bilingual intelligence brief (Part 1: Arabic, Part 2: English). Strictly avoid any emojis. Intelligently identify and flag high-priority developments in UI/UX prototyping, automated vibe coding environments, independent filmmaking, scriptwriting tools, and foundation AI models, providing their direct source links.",
   scheduledTime: "07:00",
 };
 

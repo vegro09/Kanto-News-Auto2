@@ -1,5 +1,32 @@
 [
   {
+    "id": "summary_1787577635828",
+    "timestamp": "2026-08-24T13:20:35.828Z",
+    "title": "موجز Kanto الذكي - ٢٤‏/٨‏/٢٠٢٦",
+    "summaryArabic": "# القسم الأول: الموجز الاستخباراتي باللغة العربية\nتاريخ التقرير: ٢٤ أغسطس ٢٠٢٦\nنطاق التحليل: 2 مصادر | 20 مواد تم فحصها\n\n---\n\n## 1. التطورات ذات الأولوية القصوى\n\n### 1. I were 17, I'd learn how to build LLMs from scratch [أولوية قصوى]\n- التحليل: تم تصنيف هذا التطور ضمن النطاقات الحيوية (أدوات التطوير المؤتمت، الذكاء الاصطناعي التوليدي، وتصميم الواجهات).\n- التفاصيل: Comments...\n- الرابط المباشر للمصدر: [قراءة التقرير الكامل في المصدر](https://twitter.com/paulg/status/2091544343589060625)\n\n### 2. FDA clears blood test to aid evaluation for Alzheimer's disease [أولوية قصوى]\n- التحليل: تم تصنيف هذا التطور ضمن النطاقات الحيوية (أدوات التطوير المؤتمت، الذكاء الاصطناعي التوليدي، وتصميم الواجهات).\n- التفاصيل: Comments...\n- الرابط المباشر للمصدر: [قراءة التقرير الكامل في المصدر](https://medicine.washu.edu/news/fda-clears-blood-test-to-aid-evaluation-for-alzheimers-disease/)\n\n### 3. Ask HN: Why do corporate failures always seem to punish the wrong people? [أولوية قصوى]\n- التحليل: تم تصنيف هذا التطور ضمن النطاقات الحيوية (أدوات التطوير المؤتمت، الذكاء الاصطناعي التوليدي، وتصميم الواجهات).\n- التفاصيل: Comments...\n- الرابط المباشر للمصدر: [قراءة التقرير الكامل في المصدر](https://news.ycombinator.com/item?id=49418675)\n\n## 2. المستجدات التقنية العامة\n\n### 1. SeL4 security proofs now complete on AArch64\n- الملخص: Comments...\n\n### 2. Everything I own, owned\n- الملخص: Comments...\n\n## 3. التوجيهات والتوصيات\n- تعزيز أتمتة تدفقات العمل وربط النماذج اللغوية بالأدوات البرمجية المحلية.\n- الاستفادة من بيئات التطوير السريعة (Vibe Coding) لرفع كفاءة الإنتاج البرمجي والإبداعي.\n\n=======================================================\n\n# SECTION 2: ENGLISH INTELLIGENCE BRIEF\nReport Date: August 24, 2026\nAnalytical Scope: 2 Sources | 20 Items Ingested\n\n---\n\n## 1. High-Priority Strategic Developments\n\n### 1. I were 17, I'd learn how to build LLMs from scratch [HIGH PRIORITY]\n- Strategic Assessment: Critical intelligence intersecting frontier AI systems, autonomous developer environments, and design automation.\n- Details: Comments...\n- Direct Source Link: [Read Full Source Article](https://twitter.com/paulg/status/2091544343589060625)\n\n### 2. FDA clears blood test to aid evaluation for Alzheimer's disease [HIGH PRIORITY]\n- Strategic Assessment: Critical intelligence intersecting frontier AI systems, autonomous developer environments, and design automation.\n- Details: Comments...\n- Direct Source Link: [Read Full Source Article](https://medicine.washu.edu/news/fda-clears-blood-test-to-aid-evaluation-for-alzheimers-disease/)\n\n### 3. Ask HN: Why do corporate failures always seem to punish the wrong people? [HIGH PRIORITY]\n- Strategic Assessment: Critical intelligence intersecting frontier AI systems, autonomous developer environments, and design automation.\n- Details: Comments...\n- Direct Source Link: [Read Full Source Article](https://news.ycombinator.com/item?id=49418675)\n\n## 2. General Industry Intelligence\n\n### 1. SeL4 security proofs now complete on AArch64\n- Summary: Comments...\n\n### 2. Everything I own, owned\n- Summary: Comments...\n\n## 3. Actionable Takeaways\n- Accelerate integration of autonomous agent workflows within local execution sandboxes.\n- Capitalize on modern vibe coding environments and scriptwriting toolchains for rapid prototyping.",
+    "triggerType": "manual",
+    "durationMs": 799,
+    "sourcesProcessed": 2,
+    "totalArticlesFetched": 20,
+    "sources": [
+      {
+        "title": "Hacker News",
+        "hostname": "news.ycombinator.com",
+        "articlesCount": 10,
+        "url": "https://news.ycombinator.com/rss"
+      },
+      {
+        "title": "The Verge",
+        "hostname": "www.theverge.com",
+        "articlesCount": 10,
+        "url": "https://www.theverge.com/rss/index.xml"
+      }
+    ],
+    "promptInstructions": "قم بتلخيص أهم الأخبار والبيانات في موجز صباحي تقني موجز ومركّز. رتّب النقاط حسب الأهمية في مجالات الذكاء الاصطناعي، البنية التحتية، وتطوير البرمجيات.",
+    "model": "mock-constitutional-engine",
+    "isMock": true
+  },
+  {
     "id": "summary_1787577197164",
     "timestamp": "2026-08-24T13:13:17.165Z",
     "title": "موجز Kanto الذكي - ٢٤‏/٨‏/٢٠٢٦",

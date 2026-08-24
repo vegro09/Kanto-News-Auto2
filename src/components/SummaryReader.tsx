@@ -3,15 +3,22 @@ import { useFlow, StoredSummaryItem } from "@/lib/flow-store";
 import {
   BookOpen,
   Calendar,
-  Clock,
   Copy,
   Check,
   Trash2,
   Sparkles,
   Layers,
   ChevronRight,
-  Archive,
+  ExternalLink,
+  Languages,
 } from "lucide-react";
+
+function formatDigestContent(content: string) {
+  if (!content) return "";
+
+  // Split by main sections if bilingual
+  return content;
+}
 
 export default function SummaryReader() {
   const {
@@ -32,6 +39,112 @@ export default function SummaryReader() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const renderMarkdownText = (text: string) => {
+    // Process markdown headers, bold, and links cleanly
+    const lines = text.split("\n");
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith("# ")) {
+        const isEnglish = /^[#\s]*SECTION 2|^[#\s]*ENGLISH/i.test(trimmed);
+        return (
+          <h1
+            key={idx}
+            dir={isEnglish ? "ltr" : "rtl"}
+            className="font-serif text-2xl italic text-foreground mt-8 mb-4 border-b border-border pb-2"
+          >
+            {trimmed.replace(/^#\s+/, "")}
+          </h1>
+        );
+      }
+
+      if (trimmed.startsWith("## ")) {
+        const isEnglish = /^[#\s]*\d*\.?\s*[A-Za-z]/.test(trimmed);
+        return (
+          <h2
+            key={idx}
+            dir={isEnglish ? "ltr" : "rtl"}
+            className="text-lg font-bold text-foreground mt-6 mb-2 tracking-wide font-mono uppercase text-xs"
+          >
+            {trimmed.replace(/^##\s+/, "")}
+          </h2>
+        );
+      }
+
+      if (trimmed.startsWith("### ")) {
+        const isPriority = /HIGH PRIORITY|أولوية قصوى/i.test(trimmed);
+        const isEnglish = /[a-zA-Z]/.test(trimmed.slice(0, 10));
+        return (
+          <div
+            key={idx}
+            dir={isEnglish ? "ltr" : "rtl"}
+            className={`mt-4 mb-2 flex items-center justify-between rounded-lg border p-2.5 ${
+              isPriority
+                ? "border-foreground bg-secondary/60 text-foreground font-bold"
+                : "border-border bg-background"
+            }`}
+          >
+            <span className="text-sm font-semibold">{trimmed.replace(/^###\s+/, "")}</span>
+            {isPriority && (
+              <span className="rounded bg-foreground px-2 py-0.5 text-[9px] uppercase tracking-wider text-background font-mono font-bold">
+                PRIORITY
+              </span>
+            )}
+          </div>
+        );
+      }
+
+      if (trimmed.startsWith("---") || trimmed.startsWith("===")) {
+        return <hr key={idx} className="my-6 border-border" />;
+      }
+
+      // Check if line contains a markdown link [text](url)
+      const linkMatch = line.match(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)/);
+      if (linkMatch) {
+        const [full, linkText, url] = linkMatch;
+        const prefix = line.slice(0, line.indexOf(full));
+        const isEnglish = /[a-zA-Z]/.test(prefix.slice(0, 10));
+
+        return (
+          <p
+            key={idx}
+            dir={isEnglish ? "ltr" : "rtl"}
+            className="my-2.5 text-sm leading-relaxed text-foreground font-mono flex items-center gap-2 flex-wrap"
+          >
+            <span>{prefix}</span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded border border-foreground bg-background px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-foreground hover:text-background font-sans"
+            >
+              <span>{linkText}</span>
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </p>
+        );
+      }
+
+      if (trimmed.length === 0) {
+        return <div key={idx} className="h-2" />;
+      }
+
+      const isEnglish = /^[a-zA-Z0-9\s\-_:.]/.test(trimmed);
+      return (
+        <p
+          key={idx}
+          dir={isEnglish ? "ltr" : "rtl"}
+          className={`my-1 text-sm leading-relaxed text-foreground ${
+            isEnglish ? "text-left font-sans" : "text-right"
+          }`}
+          style={{ fontFamily: isEnglish ? "Inter, sans-serif" : "Tajawal, Inter, sans-serif" }}
+        >
+          {line.replace(/\*\*(.*?)\*\*/g, "$1")}
+        </p>
+      );
+    });
+  };
+
   if (summaries.length === 0) {
     return (
       <section className="border-t border-border bg-background px-6 py-12 md:px-10">
@@ -41,7 +154,7 @@ export default function SummaryReader() {
             Local Intelligence Archive Empty
           </h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            No digests have been archived yet. Run a pipeline test or wait for the scheduled daily execution to generate your first Arabic intelligence brief.
+            No digests have been archived yet. Run a pipeline test or wait for the scheduled daily execution to generate your first bilingual intelligence brief.
           </p>
           <button
             type="button"
@@ -50,7 +163,7 @@ export default function SummaryReader() {
             className="mt-6 inline-flex items-center gap-2 rounded-lg border border-foreground bg-foreground px-5 py-2.5 text-xs uppercase tracking-[0.18em] text-background transition-colors hover:bg-background hover:text-foreground cursor-pointer disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {isExecuting ? "Executing Pipeline..." : "Generate First Digest"}
+            {isExecuting ? "Executing Pipeline..." : "Generate First Bilingual Digest"}
           </button>
         </div>
       </section>
@@ -67,11 +180,11 @@ export default function SummaryReader() {
               <BookOpen className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="font-serif text-xl italic text-foreground">
-                The Reader · Local Archive
+              <h2 className="font-serif text-xl italic text-foreground flex items-center gap-2">
+                The Reader · Bilingual Intelligence Archive
               </h2>
               <p className="text-xs text-muted-foreground font-mono">
-                {summaries.length} Intelligence Brief(s) stored locally in data/summaries.json
+                {summaries.length} Brief(s) stored in data/summaries.json · Arabic & English Sections · Zero Emojis
               </p>
             </div>
           </div>
@@ -105,7 +218,7 @@ export default function SummaryReader() {
             <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground font-mono mb-1">
               Archived Briefs
             </span>
-            <div className="flex flex-col gap-2 max-h-[520px] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2 max-h-[560px] overflow-y-auto pr-1">
               {summaries.map((item) => {
                 const isSelected = selectedSummary?.id === item.id;
                 const formattedDate = new Date(item.timestamp).toLocaleString("ar-SA", {
@@ -175,6 +288,10 @@ export default function SummaryReader() {
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="flex items-center gap-1.5">
+                      <Languages className="h-3.5 w-3.5 text-foreground" />
+                      Bilingual (Arabic / English)
+                    </span>
+                    <span className="flex items-center gap-1.5">
                       <Layers className="h-3.5 w-3.5" />
                       {selectedSummary.sourcesProcessed} Sources ({selectedSummary.totalArticlesFetched} Items)
                     </span>
@@ -198,16 +315,9 @@ export default function SummaryReader() {
                   </div>
                 )}
 
-                {/* Arabic Text Body in Tajawal Font */}
-                <div
-                  dir="rtl"
-                  className="font-sans text-base leading-loose text-foreground whitespace-pre-line text-right"
-                  style={{
-                    fontFamily: "'Tajawal', 'Inter', sans-serif",
-                    letterSpacing: "0.01em",
-                  }}
-                >
-                  {selectedSummary.summaryArabic}
+                {/* Rendered Bilingual Markdown Content */}
+                <div className="space-y-1">
+                  {renderMarkdownText(selectedSummary.summaryArabic)}
                 </div>
               </div>
             ) : null}
